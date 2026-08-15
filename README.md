@@ -2,7 +2,9 @@
 
 Automatically syncs your Anki collection in the background — without stealing focus, raising windows, or interrupting your workflow.
 
-Install from anki [web](https://ankiweb.net/shared/info/226796325)
+Install from [AnkiWeb](https://ankiweb.net/shared/info/226796325) or download the latest release below.
+
+**Latest release:** [Background Auto Sync v5.0.1](https://github.com/athulkrishna2015/Background-Auto-Sync-for-Anki-Addon/releases/tag/v5.0.1)
 
 This addon is a fork of [Auto-Sync-Anki-Addon by Robin-Haupt-1](https://github.com/Robin-Haupt-1/Auto-Sync-Anki-Addon).
 
@@ -15,6 +17,7 @@ This addon is a fork of [Auto-Sync-Anki-Addon by Robin-Haupt-1](https://github.c
 - **Idle-before-sync delay** — When a change is detected, waits for a configurable idle period before syncing, so it doesn't interrupt an active editing session (default: 2 minutes).
 - **Interruption avoidance** — Three independently toggleable conditions (dialogs open / main window focused / reviewing) that defer sync, each with its own "allow sync anyway after" grace period, plus a global override timeout.
 - **Session log file** — View a timestamped log in the Logs tab or inspect `auto_sync.log` in the add-on folder. The file is cleared when Anki starts so it contains the current session's activity.
+- **Support tab** — The Support tab opens automatically once after each new release. Enable the supporter checkbox to prevent it from opening automatically in future releases.
 
 ## Important Considerations
 
@@ -104,6 +107,3 @@ GPL-3.0 — see [LICENSE.txt](LICENSE.txt).
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history of changes and releases.
-
-- **Bug Fix:** Fixed a startup `NameError` crash due to missing configuration variables.
-- **Documentation:** Major README refresh with explicit AnkiWeb installation instructions and UI behavior notes.
