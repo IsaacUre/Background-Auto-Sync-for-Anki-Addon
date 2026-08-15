@@ -50,6 +50,9 @@ class SyncRoutine:
         self._pre_sync_was_minimized: bool = False
         self._pre_sync_was_hidden: bool = False
         self._pre_sync_active_window: object = None
+        # Only restore window state for syncs this addon initiated in the
+        # background. Manual syncs (Sync button) must not steal or drop focus.
+        self._preserve_window_state: bool = False
 
         # Change detection — track collection modification timestamp
         self._last_synced_mod: int = 0
@@ -249,7 +252,9 @@ class SyncRoutine:
 
         self._set_user_activity_filter(False)
 
-        # Save window state BEFORE sync to restore afterwards
+        # Save window state BEFORE sync to restore afterwards, and mark this
+        # sync as addon-initiated so sync_finished restores window state.
+        self._preserve_window_state = True
         self._save_window_state()
         self.log(f"Syncing (background: minimized={self._pre_sync_was_minimized}, hidden={self._pre_sync_was_hidden}, anki_active={self._pre_sync_active_window == mw})")
 
@@ -299,7 +304,7 @@ class SyncRoutine:
 
     def sync_finished(self, *args):
         """When one sync cycle has finished, start the whole process over.
-        Restore window state to prevent focus stealing."""
+        Restore window state to prevent focus stealing (background syncs only)."""
         self.log("Sync completed")
         self.sync_in_progress = False
         self.activity_since_sync = False
@@ -310,8 +315,11 @@ class SyncRoutine:
         except Exception:
             pass
 
-        # Restore window state so Anki doesn't stay in the foreground
-        self._restore_window_state()
+        # Only restore window state for background syncs initiated by this
+        # addon. Manual syncs (Sync button) must retain focus normally.
+        if self._preserve_window_state:
+            self._restore_window_state()
+            self._preserve_window_state = False
 
         self.start_countdown_to_sync_timer()
 
@@ -357,3 +365,4 @@ class SyncRoutine:
             self.sync_timer = None
         self._set_user_activity_filter(False)
         self.sync_in_progress = False
+        self._preserve_window_state = False
