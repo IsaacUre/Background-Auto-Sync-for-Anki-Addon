@@ -35,11 +35,18 @@ from .tabs import settings_tab, logs_tab, support_tab
 from .tabs.logs_tab import LogManager
 
 class AutoSyncOptionsDialog(QDialog):
-    def __init__(self, config: AutoSyncConfigManager, sync_routine: SyncRoutine, log_manager: LogManager):
+    def __init__(
+        self,
+        config: AutoSyncConfigManager,
+        sync_routine: SyncRoutine,
+        log_manager: LogManager,
+        initial_tab: int | None = None,
+    ):
         super(AutoSyncOptionsDialog, self).__init__()
         self.config = config
         self.sync_routine: SyncRoutine = sync_routine
         self.log_manager = log_manager
+        self.initial_tab = initial_tab
 
         self.kofi_widget = None
         self.log_output = None
@@ -168,8 +175,8 @@ class AutoSyncOptionsDialog(QDialog):
 
         # --- Support Tab ---
         tab_widget.addTab(support_tab.build(self), "Support")
-        if support_tab.should_open_after_update():
-            tab_widget.setCurrentIndex(2)
+        if self.initial_tab is not None:
+            tab_widget.setCurrentIndex(self.initial_tab)
 
         # --- Bottom buttons (shared across tabs) ---
         btn_layout = QHBoxLayout()
@@ -289,7 +296,7 @@ class AutoSyncOptionsDialog(QDialog):
         super().closeEvent(a0)
 
 
-def on_options_call(conf, sync_routine, log_manager):
+def on_options_call(conf, sync_routine, log_manager, initial_tab=None):
     """Open settings dialog"""
-    dialog = AutoSyncOptionsDialog(conf, sync_routine, log_manager)
+    dialog = AutoSyncOptionsDialog(conf, sync_routine, log_manager, initial_tab)
     dialog.exec()

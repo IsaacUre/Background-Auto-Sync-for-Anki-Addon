@@ -36,10 +36,10 @@ def should_open_after_update():
     version = _current_version()
     if meta.get("supporter_opt_out", False) or not version:
         return False
-    if meta.get("support_welcome_version") == version:
+    if meta.get("last_seen_version") == version:
         return False
 
-    meta["support_welcome_version"] = version
+    meta["last_seen_version"] = version
     mw.addonManager.writeAddonMeta(ADDON_PACKAGE, meta)
     return True
 
