@@ -172,6 +172,16 @@ class AutoSyncOptionsDialog(QDialog):
         self.strictly_avoid_interruptions_checkbox.toggled.connect(self.change_strictly_avoid_interruption)
         strictly_avoid_interruptions_label.mouseReleaseEvent = lambda *args: self.strictly_avoid_interruptions_checkbox.toggle()
 
+        # Explanation of when syncing runs/deferring while this is enabled
+        strictly_avoid_note = QLabel(
+            "<span style='color: #777;'>When enabled, auto-sync only runs while Anki is in the "
+            "background &mdash; unfocused, no dialogs open, and not reviewing.<br>"
+            "Changes made during a session are still uploaded when you close Anki.</span>"
+        )
+        strictly_avoid_note.setWordWrap(True)
+        strictly_avoid_note.setTextFormat(Qt.TextFormat.RichText)
+        strictly_avoid_note.setMaximumWidth(380)
+
         # "Only sync when changes detected" checkbox
         sync_on_change_only_label = QLabel("Only sync when changes are detected")
         sync_on_change_only_tooltip = (
@@ -251,24 +261,25 @@ class AutoSyncOptionsDialog(QDialog):
 
         grid.addWidget(strictly_avoid_interruptions_label, 2, 0)
         grid.addWidget(self.strictly_avoid_interruptions_checkbox, 2, 1)
+        grid.addWidget(strictly_avoid_note, 3, 0, 1, 2)
 
-        grid.addWidget(sync_on_change_only_label, 3, 0)
-        grid.addWidget(self.sync_on_change_only_checkbox, 3, 1)
+        grid.addWidget(sync_on_change_only_label, 4, 0)
+        grid.addWidget(self.sync_on_change_only_checkbox, 4, 1)
 
-        grid.addWidget(idle_before_sync_label, 4, 0)
-        grid.addWidget(self.idle_before_sync_spinbox, 4, 1)
+        grid.addWidget(idle_before_sync_label, 5, 0)
+        grid.addWidget(self.idle_before_sync_spinbox, 5, 1)
 
-        grid.addWidget(disable_internet_check_label, 5, 0)
-        grid.addWidget(self.disable_internet_check_checkbox, 5, 1)
+        grid.addWidget(disable_internet_check_label, 6, 0)
+        grid.addWidget(self.disable_internet_check_checkbox, 6, 1)
 
-        grid.addWidget(conflict_resolution_label, 6, 0)
-        grid.addWidget(self.conflict_resolution_combo, 6, 1)
+        grid.addWidget(conflict_resolution_label, 7, 0)
+        grid.addWidget(self.conflict_resolution_combo, 7, 1)
 
         reset_layout = QHBoxLayout()
         reset_layout.setContentsMargins(0, 0, 0, 0)
         reset_layout.addStretch()
         reset_layout.addWidget(reset_button)
-        grid.addLayout(reset_layout, 7, 1)
+        grid.addLayout(reset_layout, 8, 1)
 
         # Inline log display
         log_label = QLabel("Sync Log")

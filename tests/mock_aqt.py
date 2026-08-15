@@ -103,6 +103,7 @@ def install():
 
         class TextFormat:
             MarkdownText = 1
+            RichText = 2
 
     qt.Qt = Qt
 
