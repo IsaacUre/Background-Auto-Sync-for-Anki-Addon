@@ -4,6 +4,7 @@ from aqt.qt import (
     QApplication,
     QCheckBox,
     QCloseEvent,
+    QComboBox,
     QDialog,
     QGridLayout,
     QHBoxLayout,
@@ -30,6 +31,10 @@ from .constants import (
     CONFIG_SYNC_ON_CHANGE_ONLY,
     CONFIG_SYNC_TIMEOUT,
     CONFIG_DISABLE_INTERNET_CHECK,
+    CONFIG_CONFLICT_RESOLUTION,
+    CONFLICT_PROMPT,
+    CONFLICT_DOWNLOAD,
+    CONFLICT_UPLOAD,
     get_auto_sync_icon,
 )
 from .log_window import LogManager
@@ -52,6 +57,7 @@ class AutoSyncOptionsDialog(QDialog):
         self.idle_before_sync_spinbox = QSpinBox()
         self.strictly_avoid_interruptions_checkbox = QCheckBox()
         self.disable_internet_check_checkbox = QCheckBox()
+        self.conflict_resolution_combo = QComboBox()
 
         self.setup_ui()
 
@@ -91,6 +97,11 @@ class AutoSyncOptionsDialog(QDialog):
 
     def change_disable_internet_check(self, enabled):
         self.config.set(CONFIG_DISABLE_INTERNET_CHECK, bool(enabled))
+        self.sync_routine.reload_config()
+
+    def change_conflict_resolution(self, index):
+        value = self.conflict_resolution_combo.itemData(index)
+        self.config.set(CONFIG_CONFLICT_RESOLUTION, value)
         self.sync_routine.reload_config()
 
     def setup_ui(self):
@@ -205,6 +216,25 @@ class AutoSyncOptionsDialog(QDialog):
         self.disable_internet_check_checkbox.toggled.connect(self.change_disable_internet_check)
         disable_internet_check_label.mouseReleaseEvent = lambda *args: self.disable_internet_check_checkbox.toggle()
 
+        # "On conflict" combo box
+        conflict_resolution_label = QLabel("On sync conflict")
+        conflict_resolution_tooltip = (
+            "When a full-sync conflict is detected, Anki normally asks which "
+            "direction to sync.<br>"
+            "Here you can force a direction automatically. WARNING: the losing "
+            "side's local changes are discarded."
+        )
+        conflict_resolution_label.setToolTip(conflict_resolution_tooltip)
+        self.conflict_resolution_combo.setToolTip(conflict_resolution_tooltip)
+        self.conflict_resolution_combo.addItem("Ask me each time", CONFLICT_PROMPT)
+        self.conflict_resolution_combo.addItem("Always AnkiWeb -> local", CONFLICT_DOWNLOAD)
+        self.conflict_resolution_combo.addItem("Always local -> AnkiWeb", CONFLICT_UPLOAD)
+        current = self.config.get(CONFIG_CONFLICT_RESOLUTION)
+        idx = self.conflict_resolution_combo.findData(current)
+        if idx >= 0:
+            self.conflict_resolution_combo.setCurrentIndex(idx)
+        self.conflict_resolution_combo.currentIndexChanged.connect(self.change_conflict_resolution)
+
         # Reset Defaults button
         reset_button = QPushButton("Reset Defaults")
         reset_button.clicked.connect(self.on_reset_to_defaults_call)
@@ -231,11 +261,14 @@ class AutoSyncOptionsDialog(QDialog):
         grid.addWidget(disable_internet_check_label, 5, 0)
         grid.addWidget(self.disable_internet_check_checkbox, 5, 1)
 
+        grid.addWidget(conflict_resolution_label, 6, 0)
+        grid.addWidget(self.conflict_resolution_combo, 6, 1)
+
         reset_layout = QHBoxLayout()
         reset_layout.setContentsMargins(0, 0, 0, 0)
         reset_layout.addStretch()
         reset_layout.addWidget(reset_button)
-        grid.addLayout(reset_layout, 6, 1)
+        grid.addLayout(reset_layout, 7, 1)
 
         # Inline log display
         log_label = QLabel("Sync Log")
@@ -376,6 +409,7 @@ class AutoSyncOptionsDialog(QDialog):
         self.sync_on_change_only_checkbox.blockSignals(True)
         self.idle_before_sync_spinbox.blockSignals(True)
         self.disable_internet_check_checkbox.blockSignals(True)
+        self.conflict_resolution_combo.blockSignals(True)
 
         self.sync_timeout_spinbox.setValue(self.config.get(CONFIG_SYNC_TIMEOUT))
         self.idle_sync_timeout_spinbox.setValue(self.config.get(CONFIG_IDLE_SYNC_TIMEOUT))
@@ -383,6 +417,9 @@ class AutoSyncOptionsDialog(QDialog):
         self.sync_on_change_only_checkbox.setChecked(self.config.get(CONFIG_SYNC_ON_CHANGE_ONLY))
         self.idle_before_sync_spinbox.setValue(self.config.get(CONFIG_IDLE_BEFORE_SYNC))
         self.disable_internet_check_checkbox.setChecked(self.config.get(CONFIG_DISABLE_INTERNET_CHECK))
+        reset_idx = self.conflict_resolution_combo.findData(self.config.get(CONFIG_CONFLICT_RESOLUTION))
+        if reset_idx >= 0:
+            self.conflict_resolution_combo.setCurrentIndex(reset_idx)
 
         self.idle_before_sync_spinbox.setEnabled(self.config.get(CONFIG_SYNC_ON_CHANGE_ONLY))
         self.sync_timeout_spinbox.setEnabled(not self.config.get(CONFIG_SYNC_ON_CHANGE_ONLY))
@@ -394,6 +431,7 @@ class AutoSyncOptionsDialog(QDialog):
         self.sync_on_change_only_checkbox.blockSignals(False)
         self.idle_before_sync_spinbox.blockSignals(False)
         self.disable_internet_check_checkbox.blockSignals(False)
+        self.conflict_resolution_combo.blockSignals(False)
 
         self.sync_routine.reload_config()
 

@@ -10,6 +10,7 @@ from .constants import (
     CONFIG_SYNC_ON_CHANGE_ONLY,
     CONFIG_SYNC_TIMEOUT,
     CONFIG_DISABLE_INTERNET_CHECK,
+    CONFIG_CONFLICT_RESOLUTION,
 )
 from .utils import has_internet_connection
 from .log_window import LogManager
@@ -69,6 +70,7 @@ class SyncRoutine:
         self.SYNC_ON_CHANGE_ONLY: bool = None
         self.IDLE_BEFORE_SYNC: int = None
         self.DISABLE_INTERNET_CHECK: bool = None
+        self.CONFLICT_RESOLUTION: str = None
         self.load_config()
 
         # start auto sync process
@@ -299,9 +301,8 @@ class SyncRoutine:
                 # Properly notify all addons (including ourselves) that sync is complete
                 gui_hooks.sync_did_finish()
             else:
-                self.log("Full sync required (conflict). Passing to Anki UI.")
-                from aqt.sync import full_sync
-                full_sync(mw, out, gui_hooks.sync_did_finish)
+                self.log("Full sync required (conflict).")
+                self._resolve_conflict(mw, out, gui_hooks.sync_did_finish)
 
         gui_hooks.sync_will_start()
         # Headless sync exactly like native, but using run_in_background instead of with_progress!
@@ -309,6 +310,39 @@ class SyncRoutine:
             lambda: mw.col.sync_collection(auth, mw.pm.media_syncing_enabled()),
             on_future_done
         )
+
+    def _resolve_conflict(self, mw, out, on_done):
+        """Resolve a full-sync conflict, honoring the configured forced direction.
+
+        Anki decides FULL_DOWNLOAD / FULL_UPLOAD when one side is empty — those
+        are always respected. For ambiguous conflicts, the user's configured
+        direction is applied automatically if set; otherwise the normal Anki
+        prompt is shown."""
+        from aqt.sync import full_sync, full_download, full_upload
+
+        server_usn = out.server_media_usn if mw.pm.media_syncing_enabled() else None
+        forced = self.CONFLICT_RESOLUTION
+
+        if out.required == out.FULL_DOWNLOAD:
+            if forced == "prompt":
+                full_sync(mw, out, on_done)
+            else:
+                self.log("Conflict: downloading from AnkiWeb (local is empty)")
+                full_download(mw, server_usn, on_done)
+        elif out.required == out.FULL_UPLOAD:
+            if forced == "prompt":
+                full_sync(mw, out, on_done)
+            else:
+                self.log("Conflict: uploading to AnkiWeb (AnkiWeb is empty)")
+                full_upload(mw, server_usn, on_done)
+        elif forced == "download":
+            self.log("Conflict: forcing AnkiWeb -> local (download)")
+            full_download(mw, server_usn, on_done)
+        elif forced == "upload":
+            self.log("Conflict: forcing local -> AnkiWeb (upload)")
+            full_upload(mw, server_usn, on_done)
+        else:
+            full_sync(mw, out, on_done)
 
     def sync_finished(self, *args):
         """When one sync cycle has finished, start the whole process over.
@@ -379,6 +413,7 @@ class SyncRoutine:
         self.SYNC_ON_CHANGE_ONLY = self.config.get(CONFIG_SYNC_ON_CHANGE_ONLY)
         self.IDLE_BEFORE_SYNC = int((self.config.get(CONFIG_IDLE_BEFORE_SYNC) * 1000 * 60) - round(self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT / 2))
         self.DISABLE_INTERNET_CHECK = self.config.get(CONFIG_DISABLE_INTERNET_CHECK)
+        self.CONFLICT_RESOLUTION = self.config.get(CONFIG_CONFLICT_RESOLUTION)
 
         self.SYNC_TIMEOUT_NO_ACTIVITY = max(self.SYNC_TIMEOUT_NO_ACTIVITY, self.MINIMUM_TIMER_INTERVAL_MS)
         self.SYNC_TIMEOUT = max(self.SYNC_TIMEOUT, self.MINIMUM_TIMER_INTERVAL_MS)

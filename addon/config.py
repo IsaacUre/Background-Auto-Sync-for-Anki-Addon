@@ -10,6 +10,10 @@ from .constants import (
     CONFIG_IDLE_BEFORE_SYNC,
     CONFIG_CONFIG_VERSION,
     CONFIG_DISABLE_INTERNET_CHECK,
+    CONFIG_CONFLICT_RESOLUTION,
+    CONFLICT_PROMPT,
+    CONFLICT_DOWNLOAD,
+    CONFLICT_UPLOAD,
 )
 
 
@@ -24,7 +28,11 @@ class AutoSyncConfigManager:
         }
     )
 
-    _INT_CONFIG_KEYS = frozenset(CONFIG_DEFAULT_CONFIG) - _BOOL_CONFIG_KEYS
+    _STR_CONFIG_KEYS = frozenset({CONFIG_CONFLICT_RESOLUTION})
+
+    _STR_CONFIG_ALLOWED = frozenset({CONFLICT_PROMPT, CONFLICT_DOWNLOAD, CONFLICT_UPLOAD})
+
+    _INT_CONFIG_KEYS = frozenset(CONFIG_DEFAULT_CONFIG) - _BOOL_CONFIG_KEYS - _STR_CONFIG_KEYS
 
     def __init__(self, mw: mw):
         """Load the config with default return value and in case it's the first run, save it to Anki"""
@@ -51,6 +59,11 @@ class AutoSyncConfigManager:
             current_config[CONFIG_DISABLE_INTERNET_CHECK] = False
             current_config[CONFIG_CONFIG_VERSION] = 5
 
+        # Migration for version 6: add conflict resolution direction option
+        if current_config.get(CONFIG_CONFIG_VERSION, 0) < 6:
+            current_config[CONFIG_CONFLICT_RESOLUTION] = CONFLICT_PROMPT
+            current_config[CONFIG_CONFIG_VERSION] = 6
+
         # Merge default config into current config for any missing keys (migrations)
         self.config = self._sanitize_config(current_config)
 
@@ -68,6 +81,8 @@ class AutoSyncConfigManager:
             value = merged.get(key, default_value)
             if key in self._BOOL_CONFIG_KEYS:
                 value = self._coerce_bool(value, default_value)
+            elif key in self._STR_CONFIG_KEYS:
+                value = value if value in self._STR_CONFIG_ALLOWED else default_value
             elif key in self._INT_CONFIG_KEYS:
                 value = self._coerce_int(value, default_value)
 

@@ -40,6 +40,7 @@ Go to **Tools → Background Auto Sync Options…** to configure:
 - **Only sync when changes detected** (Default: ✅ On) — Skip idle periodic syncs if no local changes since last sync
 - **Wait idle before syncing after change** (Default: 2 minutes) — After detecting a change, wait this long idle before syncing
 - **Disable pre-sync internet check** (Default: ❌ Off) — Skip the connectivity check and trigger sync immediately (useful on extremely restrictive firewalls)
+- **On sync conflict** (Default: Ask me each time) — Force a sync direction when a full-sync conflict occurs: **Always AnkiWeb → local** (discards local changes) or **Always local → AnkiWeb** (overwrites AnkiWeb). Use only if you have a single authoritative source.
 
 *Tip: You can restore these optimal defaults at any time using the **Reset Defaults** button in the options menu.*
 <img width="896" height="484" alt="Screenshot_20260326_194454" src="https://github.com/user-attachments/assets/8ffc01e1-c339-47c6-b764-ecf8ebeb0f5a" />
@@ -76,6 +77,9 @@ If you find this add-on useful, please consider supporting its development:
 GPL-3.0 — see [LICENSE.txt](LICENSE.txt).
 
 ## Changelog
+
+### 2026-08-15
+- **Feature:** Added a "On sync conflict" option to force a one-way sync direction (AnkiWeb → local or local → AnkiWeb) instead of prompting, keeping the automated pipeline running when conflicts occur. Off by default.
 
 ### 2026-04-28
 - **Bug Fix:** Fixed an issue where the background sync could crash the main Anki thread (`PoisonError`) if it encountered a network or server error during the sync process.
