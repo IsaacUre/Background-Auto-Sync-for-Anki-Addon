@@ -78,12 +78,20 @@ def install():
         "QSpinBox",
         "QTabWidget",
         "QTextEdit",
+        "QToolButton",
         "QVBoxLayout",
         "QWidget",
     ):
         setattr(qt, _name, type(_name, (_Widget,), {}))
 
     class Qt:
+        class ArrowType:
+            RightArrow = 0
+            DownArrow = 1
+
+        class ToolButtonStyle:
+            ToolButtonTextBesideIcon = 0
+
         class AlignmentFlag:
             AlignRight = 1
             AlignTrailing = 2
