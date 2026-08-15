@@ -72,6 +72,7 @@ def install():
         "QGridLayout",
         "QHBoxLayout",
         "QLabel",
+        "QLineEdit",
         "QPixmap",
         "QPushButton",
         "QScrollArea",
@@ -79,6 +80,7 @@ def install():
         "QSpinBox",
         "QTabWidget",
         "QTextEdit",
+        "QTimer",
         "QToolButton",
         "QVBoxLayout",
         "QWidget",
@@ -93,10 +95,15 @@ def install():
         class ToolButtonStyle:
             ToolButtonTextBesideIcon = 0
 
+        class CursorShape:
+            PointingHandCursor = 0
+
         class AlignmentFlag:
             AlignRight = 1
             AlignTrailing = 2
             AlignVCenter = 4
+            AlignCenter = 8
+            AlignHCenter = 16
 
         class AspectRatioMode:
             KeepAspectRatio = 0

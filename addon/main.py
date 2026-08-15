@@ -1,7 +1,7 @@
 from aqt import gui_hooks, mw
 from aqt.qt import QAction
 from .config import AutoSyncConfigManager
-from .log_window import LogManager
+from .tabs.logs_tab import LogManager
 from .options_dialog import on_options_call
 from .sync_routine import SyncRoutine
 

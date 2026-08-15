@@ -3,6 +3,7 @@ from aqt.qt import QApplication, QIcon, QStyle
 # Config parameter keys and default values
 
 AUTO_SYNC_CONFIG_NAME = "auto_sync_config"
+ADDON_PACKAGE = __name__.split(".")[0]
 CONFIG_SYNC_TIMEOUT = "sync timeout"
 CONFIG_IDLE_SYNC_TIMEOUT = "idle sync timeout"
 CONFIG_CONFIG_VERSION = "config version"

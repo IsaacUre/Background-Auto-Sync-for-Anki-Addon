@@ -24,9 +24,8 @@ from .constants import (
     CONFIG_CONFLICT_RESOLUTION,
     get_auto_sync_icon,
 )
-from .log_window import LogManager
 from .tabs import settings_tab, logs_tab, support_tab
-
+from .tabs.logs_tab import LogManager
 
 class AutoSyncOptionsDialog(QDialog):
     def __init__(self, config: AutoSyncConfigManager, sync_routine: SyncRoutine, log_manager: LogManager):

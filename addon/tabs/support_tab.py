@@ -1,105 +1,150 @@
 """Support tab for the Auto Sync options dialog."""
 import os
 
+from aqt import mw
 from aqt.qt import (
+    QApplication,
+    QCheckBox,
     QHBoxLayout,
     QLabel,
-    QPixmap,
+    QLineEdit,
     QPushButton,
     QScrollArea,
+    QTimer,
     QVBoxLayout,
     QWidget,
+    QPixmap,
     Qt,
 )
 from aqt.webview import AnkiWebView
+
+from ..constants import ADDON_PACKAGE
+
+
+def _load_supporter_state(dialog):
+    meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
+    dialog.supporter_check.blockSignals(True)
+    dialog.supporter_check.setChecked(meta.get("supporter_opt_out", False))
+    dialog.supporter_check.blockSignals(False)
+
+
+def _on_supporter_check_toggled(dialog, checked):
+    meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
+    meta["supporter_opt_out"] = checked
+    mw.addonManager.writeAddonMeta(ADDON_PACKAGE, meta)
+
+
+def _add_qr(qr_list, name, address, filename, base_path):
+    container = QWidget()
+    vbox = QVBoxLayout(container)
+    vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    title = QLabel(f"<b>{name}</b>")
+    title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    vbox.addWidget(title)
+
+    qr_label = QLabel()
+    qr_path = os.path.join(base_path, "Support", filename)
+    pixmap = QPixmap(qr_path)
+    if not pixmap.isNull():
+        qr_label.setPixmap(pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+    else:
+        qr_label.setText("Image not found")
+    qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    vbox.addWidget(qr_label)
+
+    addr_row_container = QWidget()
+    addr_row_container.setFixedWidth(420)
+    addr_row = QHBoxLayout(addr_row_container)
+    addr_row.setContentsMargins(10, 0, 10, 0)
+    addr_row.setSpacing(10)
+
+    addr_label = QLineEdit(address)
+    addr_label.setReadOnly(True)
+    addr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    addr_label.setStyleSheet("background: rgba(0,0,0,5%); border: 1px solid rgba(0,0,0,10%); border-radius: 3px; padding: 2px;")
+    addr_label.setMinimumWidth(0)
+
+    copy_btn = QPushButton("Copy")
+    copy_btn.setFixedWidth(80)
+    copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def on_copy(_=None, addr=address, btn=copy_btn):
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clipboard.setText(addr)
+            btn.setText("Copied!")
+            QTimer.singleShot(2000, lambda: btn.setText("Copy"))
+
+    copy_btn.clicked.connect(on_copy)
+
+    addr_row.addWidget(addr_label, 1)
+    addr_row.addWidget(copy_btn)
+    vbox.addWidget(addr_row_container, 0, Qt.AlignmentFlag.AlignCenter)
+
+    qr_list.addWidget(container)
 
 
 def build(dialog) -> QWidget:
     """Build the support / donate content and return the tab widget."""
     parent = QWidget()
-    main_layout = QVBoxLayout()
-    parent.setLayout(main_layout)
+    layout = QVBoxLayout(parent)
+    layout.setContentsMargins(10, 10, 10, 10)
 
-    # Introduction
-    intro_label = QLabel("If you find this add-on useful, consider supporting its development!")
-    intro_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    intro_label.setWordWrap(True)
-    main_layout.addWidget(intro_label)
+    instr = QLabel(
+        "If you find this addon useful, consider supporting the development through the following methods:"
+    )
+    instr.setWordWrap(True)
+    instr.setOpenExternalLinks(True)
+    instr.setTextFormat(Qt.TextFormat.RichText)
+    instr.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    layout.addWidget(instr)
 
-    # Ko-fi Widget
+    # Supporter opt-out (hides the automatic update welcome)
+    dialog.supporter_check = QCheckBox("I have supported this addon (Hide automatic update welcome)")
+    dialog.supporter_check.setToolTip("Checking this will prevent the Support tab from opening automatically after future updates.")
+    dialog.supporter_check.toggled.connect(lambda checked: _on_supporter_check_toggled(dialog, checked))
+    layout.addWidget(dialog.supporter_check, 0, Qt.AlignmentFlag.AlignCenter)
+    layout.addSpacing(10)
+
+    # Scroll area for QR codes
+    scroll = QScrollArea(parent)
+    scroll.setWidgetResizable(True)
+    scroll_content = QWidget()
+    qr_list = QVBoxLayout(scroll_content)
+    qr_list.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+    qr_list.setSpacing(30)
+    scroll.setWidget(scroll_content)
+    layout.addWidget(scroll)
+
+    # Ko-fi widget (embedded via AnkiWebView)
+    dialog.kofi_widget = AnkiWebView(parent)
+    dialog.kofi_widget.setFixedHeight(42)
     kofi_html = """
-    <body style="margin: 0; padding: 8px 0;">
-    <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-        <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
-        <script type='text/javascript'>
-            kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'D1D01W6NQT');
-            kofiwidget2.draw();
-        </script>
-    </div>
+    <html>
+    <head>
+    <style>
+      body { background-color: transparent; margin: 0; padding: 0; overflow: hidden; text-align: center; line-height: 42px; }
+      .kofi-button-col { display: inline-block; vertical-align: middle; }
+    </style>
+    </head>
+    <body>
+    <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+    <script type='text/javascript'>
+      kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'D1D01W6NQT');
+      kofiwidget2.draw();
+    </script>
     </body>
+    </html>
     """
-    dialog.kofi_widget = AnkiWebView(title="kofi_support")
-    dialog.kofi_widget.stdHtml(kofi_html)
-    dialog.kofi_widget.setFixedHeight(60)
-    main_layout.addWidget(dialog.kofi_widget)
+    dialog.kofi_widget.setHtml(kofi_html)
+    layout.addWidget(dialog.kofi_widget)
 
-    # Scroll area for donation details
-    scroll_area = QScrollArea()
-    scroll_area.setWidgetResizable(True)
-    scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-    main_layout.addWidget(scroll_area)
+    base_path = os.path.dirname(os.path.dirname(__file__))
 
-    scroll_widget = QWidget()
-    scroll_layout = QVBoxLayout()
-    scroll_widget.setLayout(scroll_layout)
-    scroll_area.setWidget(scroll_widget)
+    _add_qr(qr_list, "UPI", "athulkrishnasv2015-2@okhdfcbank", "UPI.jpg", base_path)
+    _add_qr(qr_list, "BTC", "bc1qrrek3m7sr33qujjrktj949wav6mehdsk057cfx", "BTC.jpg", base_path)
+    _add_qr(qr_list, "ETH", "0xce6899e4903EcB08bE5Be65E44549fadC3F45D27", "ETH.jpg", base_path)
 
-    # Support details
-    support_items = [
-        {"title": "UPI", "id": "athulkrishnasv2015-2@okhdfcbank", "img": "UPI.jpg"},
-        {"title": "Bitcoin (BTC)", "id": "bc1qrrek3m7sr33qujjrktj949wav6mehdsk057cfx", "img": "BTC.jpg"},
-        {"title": "Ethereum (ETH)", "id": "0xce6899e4903EcB08bE5Be65E44549fadC3F45D27", "img": "ETH.jpg"},
-    ]
-
-    addon_path = os.path.dirname(__file__)
-    support_dir = os.path.join(addon_path, "..", "Support")
-
-    for item in support_items:
-        item_widget = QWidget()
-        item_layout = QVBoxLayout()
-        item_widget.setLayout(item_layout)
-
-        # Title
-        title_label = QLabel(f"<b>{item['title']}</b>")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        item_layout.addWidget(title_label)
-
-        # QR Code
-        qr_label = QLabel()
-        qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        img_path = os.path.join(support_dir, item["img"])
-        if os.path.exists(img_path):
-            pixmap = QPixmap(img_path)
-            pixmap = pixmap.scaled(250, 250, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            qr_label.setPixmap(pixmap)
-        else:
-            qr_label.setText("(Image not found)")
-        item_layout.addWidget(qr_label)
-
-        # ID and Copy Button
-        id_layout = QHBoxLayout()
-        id_label = QLabel(item["id"])
-        id_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-
-        copy_button = QPushButton("Copy")
-        copy_button.setMaximumWidth(80)
-        copy_button.clicked.connect(lambda checked, text=item["id"]: dialog._copy_to_clipboard(text))
-
-        id_layout.addWidget(id_label)
-        id_layout.addWidget(copy_button)
-        item_layout.addLayout(id_layout)
-
-        item_layout.setContentsMargins(0, 10, 0, 20)
-        scroll_layout.addWidget(item_widget)
-
+    _load_supporter_state(dialog)
     return parent

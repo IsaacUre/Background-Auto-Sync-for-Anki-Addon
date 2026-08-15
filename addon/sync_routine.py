@@ -13,7 +13,7 @@ from .constants import (
     CONFIG_CONFLICT_RESOLUTION,
 )
 from .utils import has_internet_connection
-from .log_window import LogManager
+from .tabs.logs_tab import LogManager
 
 log_to_stdout = False
 
