@@ -23,11 +23,11 @@ from ..constants import (
     CONFLICT_PROMPT,
     CONFLICT_UPLOAD,
 )
+from ..utils import wrap_in_scroll
 
 
 def build(dialog) -> QWidget:
     """Build the settings controls and return the tab widget."""
-    parent = QWidget()
 
     # "Sync after" option
     sync_timeout_label = QLabel("Sync after")
@@ -173,5 +173,7 @@ def build(dialog) -> QWidget:
     # Wrap grid in a vbox
     outer_layout = QVBoxLayout()
     outer_layout.addLayout(grid)
-    parent.setLayout(outer_layout)
-    return parent
+
+    content = QWidget()
+    content.setLayout(outer_layout)
+    return wrap_in_scroll(content)

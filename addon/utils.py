@@ -1,5 +1,16 @@
 import socket
 
+from aqt.qt import QScrollArea, QWidget
+
+
+def wrap_in_scroll(content: QWidget) -> QWidget:
+    """Wrap a widget in a scroll area that only shows scrollbars when needed."""
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+    scroll.setWidget(content)
+    return scroll
+
 
 def has_internet_connection(host="8.8.8.8", port=443, timeout=3):
     """Try connecting to the Google DNS server to check internet connectivity.

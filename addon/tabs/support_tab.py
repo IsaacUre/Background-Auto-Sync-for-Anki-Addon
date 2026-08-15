@@ -9,7 +9,6 @@ from aqt.qt import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QScrollArea,
     QTimer,
     QVBoxLayout,
     QWidget,
@@ -19,6 +18,7 @@ from aqt.qt import (
 from aqt.webview import AnkiWebView
 
 from ..constants import ADDON_PACKAGE
+from ..utils import wrap_in_scroll
 
 
 def _load_supporter_state(dialog):
@@ -87,8 +87,8 @@ def _add_qr(qr_list, name, address, filename, base_path):
 
 def build(dialog) -> QWidget:
     """Build the support / donate content and return the tab widget."""
-    parent = QWidget()
-    layout = QVBoxLayout(parent)
+    content = QWidget()
+    layout = QVBoxLayout(content)
     layout.setContentsMargins(10, 10, 10, 10)
 
     instr = QLabel(
@@ -107,18 +107,8 @@ def build(dialog) -> QWidget:
     layout.addWidget(dialog.supporter_check, 0, Qt.AlignmentFlag.AlignCenter)
     layout.addSpacing(10)
 
-    # Scroll area for QR codes
-    scroll = QScrollArea(parent)
-    scroll.setWidgetResizable(True)
-    scroll_content = QWidget()
-    qr_list = QVBoxLayout(scroll_content)
-    qr_list.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-    qr_list.setSpacing(30)
-    scroll.setWidget(scroll_content)
-    layout.addWidget(scroll)
-
     # Ko-fi widget (embedded via AnkiWebView)
-    dialog.kofi_widget = AnkiWebView(parent)
+    dialog.kofi_widget = AnkiWebView(content)
     dialog.kofi_widget.setFixedHeight(42)
     kofi_html = """
     <html>
@@ -142,9 +132,14 @@ def build(dialog) -> QWidget:
 
     base_path = os.path.dirname(os.path.dirname(__file__))
 
+    qr_list = QVBoxLayout()
+    qr_list.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+    qr_list.setSpacing(30)
+
     _add_qr(qr_list, "UPI", "athulkrishnasv2015-2@okhdfcbank", "UPI.jpg", base_path)
     _add_qr(qr_list, "BTC", "bc1qrrek3m7sr33qujjrktj949wav6mehdsk057cfx", "BTC.jpg", base_path)
     _add_qr(qr_list, "ETH", "0xce6899e4903EcB08bE5Be65E44549fadC3F45D27", "ETH.jpg", base_path)
+    layout.addLayout(qr_list)
 
     _load_supporter_state(dialog)
-    return parent
+    return wrap_in_scroll(content)
