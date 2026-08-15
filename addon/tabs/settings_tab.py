@@ -62,13 +62,14 @@ def build(dialog) -> QWidget:
 
     # Explanation of when syncing runs/deferring while this is enabled
     strictly_avoid_note = QLabel(
-        "<span style='color: #777;'>When enabled, auto-sync only runs while Anki is in the "
+        "<span style='color: #cc0000;'>When enabled, auto-sync only runs while Anki is in the "
         "background &mdash; unfocused, no dialogs open, and not reviewing.<br>"
         "Changes made during a session are still uploaded when you close Anki.</span>"
     )
     strictly_avoid_note.setWordWrap(True)
     strictly_avoid_note.setTextFormat(Qt.TextFormat.RichText)
-    strictly_avoid_note.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+    strictly_avoid_note.setContentsMargins(0, 0, 0, 0)
+    strictly_avoid_note.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     # "Only sync when changes detected" checkbox
     sync_on_change_only_label = QLabel("Only sync when changes are detected")
