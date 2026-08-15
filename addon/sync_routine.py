@@ -1,12 +1,20 @@
 import datetime
+import time
 from aqt import dialogs as aqt_dialogs
 from aqt import mw
 from aqt.qt import QApplication, QEvent, QObject
 from .config import AutoSyncConfigManager
 from .constants import (
     CONFIG_IDLE_BEFORE_SYNC,
+    CONFIG_IDLE_SYNC_FOCUSED_TIMEOUT,
     CONFIG_IDLE_SYNC_TIMEOUT,
-    CONFIG_STRICTLY_AVOID_INTERRUPTIONS,
+    CONFIG_AVOID_INTERRUPTION_DIALOGS,
+    CONFIG_AVOID_DIALOG_LIST,
+    CONFIG_AVOID_DIALOGS_TIMEOUT,
+    CONFIG_AVOID_INTERRUPTION_FOCUS,
+    CONFIG_AVOID_INTERRUPTION_REVIEW,
+    CONFIG_AVOID_REVIEW_TIMEOUT,
+    CONFIG_AVOID_OVERRIDE_TIMEOUT,
     CONFIG_SYNC_ON_CHANGE_ONLY,
     CONFIG_SYNC_TIMEOUT,
     CONFIG_DISABLE_INTERNET_CHECK,
@@ -48,6 +56,8 @@ class SyncRoutine:
         self.activity_since_sync: bool = True
         self.user_activity_event_listener = UserActivityEventListener(self)
         self._event_filter_installed: bool = False
+        # Timestamp of the last user click/keypress, for the focused-idle grace period
+        self._last_activity_time: float = time.monotonic()
 
         # Background sync state — saved before sync, restored after
         self._pre_sync_was_minimized: bool = False
@@ -66,9 +76,16 @@ class SyncRoutine:
         self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT = 0.2 * 1000 * 60  # Reinstall the event listener every 0.2 minutes. If it were running all the time, it would impact performance
         self.SYNC_TIMEOUT_NO_ACTIVITY: int = None
         self.SYNC_TIMEOUT: int = None
-        self.STRICTLY_AVOID_INTERRUPTIONS: bool = None
+        self.AVOID_INTERRUPTION_DIALOGS: bool = None
+        self.AVOID_DIALOG_LIST: set = None
+        self.AVOID_DIALOGS_TIMEOUT: int = None
+        self.AVOID_INTERRUPTION_FOCUS: bool = None
+        self.AVOID_INTERRUPTION_REVIEW: bool = None
+        self.AVOID_REVIEW_TIMEOUT: int = None
+        self.AVOID_OVERRIDE_TIMEOUT: int = None
         self.SYNC_ON_CHANGE_ONLY: bool = None
         self.IDLE_BEFORE_SYNC: int = None
+        self.IDLE_SYNC_FOCUSED_TIMEOUT: int = None
         self.DISABLE_INTERNET_CHECK: bool = None
         self.CONFLICT_RESOLUTION: str = None
         self.load_config()
@@ -127,6 +144,22 @@ class SyncRoutine:
                 continue
         return False
 
+    def _focused_idle_grace_elapsed(self) -> bool:
+        """True when the focused-idle grace (specific or global) has elapsed."""
+        return self._idle_grace_elapsed(self._effective_override_ms(self.IDLE_SYNC_FOCUSED_TIMEOUT))
+
+    def _idle_grace_elapsed(self, timeout_ms) -> bool:
+        """True when the user has been idle longer than the given timeout (ms), or it is disabled (<=0)."""
+        if not timeout_ms or timeout_ms <= 0:
+            return False
+        elapsed_ms = (time.monotonic() - self._last_activity_time) * 1000
+        return elapsed_ms >= timeout_ms
+
+    def _effective_override_ms(self, specific_ms) -> int:
+        """Effective override timeout = lower of (specific, global), ignoring disabled (0) values."""
+        options = [t for t in (specific_ms, self.AVOID_OVERRIDE_TIMEOUT) if t and t > 0]
+        return min(options) if options else 0
+
     @staticmethod
     def _open_dialog_names():
         dialogs = getattr(aqt_dialogs, "_dialogs", {})
@@ -140,17 +173,18 @@ class SyncRoutine:
         reasons = []  # all the reasons why it can't sync now will be collected in this
         if self.sync_in_progress:
             reasons.append("Sync in progress")
-        if self.STRICTLY_AVOID_INTERRUPTIONS:
-            # check if any dialogs are open
-            if not aqt_dialogs.allClosed():
-                open_windows = self._open_dialog_names()
-                if open_windows:
-                    reasons.append(f"Windows are open: {', '.join(open_windows)}")
-                else:
-                    reasons.append("Windows are open")
-            if self._main_window_has_focus():
+        # Avoid syncing while dialogs (browser, add-note, etc.) are open
+        if self.AVOID_INTERRUPTION_DIALOGS:
+            blocking = [n for n in self._open_dialog_names() if n in self.AVOID_DIALOG_LIST]
+            if blocking and not self._idle_grace_elapsed(self._effective_override_ms(self.AVOID_DIALOGS_TIMEOUT)):
+                reasons.append(f"Windows are open: {', '.join(sorted(blocking))}")
+        # Avoid syncing while the main window has focus (unless idle past the grace period)
+        if self.AVOID_INTERRUPTION_FOCUS and self._main_window_has_focus():
+            if not self._idle_grace_elapsed(self._effective_override_ms(self.IDLE_SYNC_FOCUSED_TIMEOUT)):
                 reasons.append("Main Window has focus")
-            if mw.state not in ["deckBrowser", "overview"]:
+        # Avoid syncing while reviewing / outside the safe screens
+        if self.AVOID_INTERRUPTION_REVIEW and mw.state not in ["deckBrowser", "overview"]:
+            if not self._idle_grace_elapsed(self._effective_override_ms(self.AVOID_REVIEW_TIMEOUT)):
                 reasons.append("Main Window is not on deck browser or overview screen (state: " + str(mw.state) + ")")
 
         if len(reasons) > 0:
@@ -206,6 +240,7 @@ class SyncRoutine:
         """Stop sync timer and register user activity (shortens timeout till next sync)"""
         self.log("User activity! Stopped sync timer")
         self.activity_since_sync = True
+        self._last_activity_time = time.monotonic()
         self.stop_sync_timer()
 
     def _save_window_state(self):
@@ -409,9 +444,16 @@ class SyncRoutine:
         """Load the constants from config manager"""
         self.SYNC_TIMEOUT_NO_ACTIVITY = int((self.config.get(CONFIG_IDLE_SYNC_TIMEOUT) * 1000 * 60) - round(self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT / 2))
         self.SYNC_TIMEOUT = int((self.config.get(CONFIG_SYNC_TIMEOUT) * 1000 * 60) - round(self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT / 2))
-        self.STRICTLY_AVOID_INTERRUPTIONS = self.config.get(CONFIG_STRICTLY_AVOID_INTERRUPTIONS)
+        self.AVOID_INTERRUPTION_DIALOGS = self.config.get(CONFIG_AVOID_INTERRUPTION_DIALOGS)
+        self.AVOID_DIALOG_LIST = set(self.config.get(CONFIG_AVOID_DIALOG_LIST))
+        self.AVOID_DIALOGS_TIMEOUT = int(self.config.get(CONFIG_AVOID_DIALOGS_TIMEOUT) * 1000 * 60)
+        self.AVOID_INTERRUPTION_FOCUS = self.config.get(CONFIG_AVOID_INTERRUPTION_FOCUS)
+        self.AVOID_INTERRUPTION_REVIEW = self.config.get(CONFIG_AVOID_INTERRUPTION_REVIEW)
+        self.AVOID_REVIEW_TIMEOUT = int(self.config.get(CONFIG_AVOID_REVIEW_TIMEOUT) * 1000 * 60)
+        self.AVOID_OVERRIDE_TIMEOUT = int(self.config.get(CONFIG_AVOID_OVERRIDE_TIMEOUT) * 1000 * 60)
         self.SYNC_ON_CHANGE_ONLY = self.config.get(CONFIG_SYNC_ON_CHANGE_ONLY)
         self.IDLE_BEFORE_SYNC = int((self.config.get(CONFIG_IDLE_BEFORE_SYNC) * 1000 * 60) - round(self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT / 2))
+        self.IDLE_SYNC_FOCUSED_TIMEOUT = int(self.config.get(CONFIG_IDLE_SYNC_FOCUSED_TIMEOUT) * 1000 * 60)
         self.DISABLE_INTERNET_CHECK = self.config.get(CONFIG_DISABLE_INTERNET_CHECK)
         self.CONFLICT_RESOLUTION = self.config.get(CONFIG_CONFLICT_RESOLUTION)
 
@@ -423,7 +465,13 @@ class SyncRoutine:
 
         self.log(f"Loaded config. Sync timeout: {self.SYNC_TIMEOUT / 60000} min, "
                  f"idle sync timeout: {idle_sync_text}. "
-                 f"Strictly avoid interruptions: {'on' if self.STRICTLY_AVOID_INTERRUPTIONS else 'off'}. "
+                 f"Avoid on dialogs: {'on' if self.AVOID_INTERRUPTION_DIALOGS else 'off'}, "
+                 f"on focus: {'on' if self.AVOID_INTERRUPTION_FOCUS else 'off'}, "
+                 f"on review: {'on' if self.AVOID_INTERRUPTION_REVIEW else 'off'}. "
+                 f"Override timeouts (min): dialogs {self.AVOID_DIALOGS_TIMEOUT / 60000}, "
+                 f"focus {self.IDLE_SYNC_FOCUSED_TIMEOUT / 60000}, "
+                 f"review {self.AVOID_REVIEW_TIMEOUT / 60000}, "
+                 f"global {self.AVOID_OVERRIDE_TIMEOUT / 60000}. "
                  f"Sync on change only: {'on' if self.SYNC_ON_CHANGE_ONLY else 'off'}. "
                  f"Idle before sync: {self.IDLE_BEFORE_SYNC / 60000} min. "
                  f"Disable internet check: {'on' if self.DISABLE_INTERNET_CHECK else 'off'}")

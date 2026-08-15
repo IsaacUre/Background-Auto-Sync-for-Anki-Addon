@@ -1,4 +1,5 @@
 import sys
+import time
 import unittest
 from unittest import mock
 
@@ -17,9 +18,16 @@ def make_routine(conflict=CONFLICT_PROMPT, config_extra=None):
         side_effect=lambda key: {
             "sync timeout": 1,
             "idle sync timeout": 0,
-            "strictly avoid interruptions": True,
+            "avoid sync when dialogs open": True,
+            "avoid dialogs list": ["Browser", "AddCards", "EditCurrent", "DeckStats", "Preferences"],
+            "avoid dialogs timeout": 0,
+            "avoid sync when main window focused": True,
+            "avoid sync while reviewing": True,
+            "avoid review timeout": 0,
+            "global avoid override timeout": 0,
             "sync on change only": True,
             "idle before sync": 2,
+            "idle sync focused timeout": 0,
             "disable internet check": False,
             "on conflict": conflict,
             **(config_extra or {}),
@@ -177,6 +185,126 @@ class WindowStateRestoreGateTest(unittest.TestCase):
         with mock.patch.object(r, "_restore_window_state") as restore:
             r.sync_finished()
         restore.assert_not_called()
+
+
+class FocusedIdleGraceTest(unittest.TestCase):
+    def _routine(self, minutes):
+        r = make_routine(config_extra={"idle sync focused timeout": minutes})
+        r.IDLE_SYNC_FOCUSED_TIMEOUT = minutes * 60 * 1000
+        return r
+
+    def test_disabled_never_elapses(self):
+        r = self._routine(0)
+        self.assertFalse(r._focused_idle_grace_elapsed())
+
+    def test_elapses_after_timeout(self):
+        r = self._routine(5)
+        r._last_activity_time = time.monotonic() - 6 * 60
+        self.assertTrue(r._focused_idle_grace_elapsed())
+
+
+class GlobalOverrideTest(unittest.TestCase):
+    def test_specific_lower_wins(self):
+        r = make_routine(config_extra={"global avoid override timeout": 10})
+        r.AVOID_OVERRIDE_TIMEOUT = 10 * 60 * 1000
+        r.AVOID_DIALOGS_TIMEOUT = 3 * 60 * 1000
+        self.assertEqual(r._effective_override_ms(r.AVOID_DIALOGS_TIMEOUT), 3 * 60 * 1000)
+
+    def test_global_lower_wins(self):
+        r = make_routine(config_extra={"global avoid override timeout": 5})
+        r.AVOID_OVERRIDE_TIMEOUT = 5 * 60 * 1000
+        r.AVOID_DIALOGS_TIMEOUT = 10 * 60 * 1000
+        self.assertEqual(r._effective_override_ms(r.AVOID_DIALOGS_TIMEOUT), 5 * 60 * 1000)
+
+    def test_disabled_specific_uses_global(self):
+        r = make_routine(config_extra={"global avoid override timeout": 5})
+        r.AVOID_OVERRIDE_TIMEOUT = 5 * 60 * 1000
+        r.AVOID_DIALOGS_TIMEOUT = 0
+        self.assertEqual(r._effective_override_ms(r.AVOID_DIALOGS_TIMEOUT), 5 * 60 * 1000)
+
+    def test_both_disabled_no_override(self):
+        r = make_routine()
+        r.AVOID_OVERRIDE_TIMEOUT = 0
+        r.AVOID_DIALOGS_TIMEOUT = 0
+        self.assertEqual(r._effective_override_ms(r.AVOID_DIALOGS_TIMEOUT), 0)
+
+    def test_global_override_lets_review_sync(self):
+        # Review blocked, but global override (5 min) elapsed -> sync proceeds
+        r = make_routine(config_extra={"global avoid override timeout": 5})
+        r.AVOID_OVERRIDE_TIMEOUT = 5 * 60 * 1000
+        r._last_activity_time = time.monotonic() - 6 * 60
+        aqt_mod.mw.state = "review"
+        with mock.patch.object(SyncRoutine, "_main_window_has_focus", return_value=False):
+            self.assertTrue(r.is_good_state())
+        aqt_mod.mw.state = "deckBrowser"
+
+
+class FocusedIdleGraceTest(unittest.TestCase):
+    def _routine(self, minutes):
+        r = make_routine(config_extra={"idle sync focused timeout": minutes})
+        r.IDLE_SYNC_FOCUSED_TIMEOUT = minutes * 60 * 1000
+        return r
+
+    def test_not_elapsed_before_timeout(self):
+        r = self._routine(5)
+        r._last_activity_time = time.monotonic() - 60
+        self.assertFalse(r._focused_idle_grace_elapsed())
+
+    def test_good_state_blocks_focused_without_grace(self):
+        r = self._routine(0)
+        with mock.patch.object(SyncRoutine, "_main_window_has_focus", return_value=True):
+            self.assertFalse(r.is_good_state())
+
+    def test_good_state_allows_focused_after_grace(self):
+        r = self._routine(5)
+        r._last_activity_time = time.monotonic() - 6 * 60
+        with mock.patch.object(SyncRoutine, "_main_window_has_focus", return_value=True):
+            self.assertTrue(r.is_good_state())
+
+
+class InterruptionToggleTest(unittest.TestCase):
+    def _no_focus(self):
+        return mock.patch.object(SyncRoutine, "_main_window_has_focus", return_value=False)
+
+    def test_review_off_allows_review_state(self):
+        r = make_routine(config_extra={"avoid sync while reviewing": False})
+        aqt_mod.mw.state = "review"
+        with self._no_focus():
+            self.assertTrue(r.is_good_state())
+        aqt_mod.mw.state = "deckBrowser"
+
+    def test_review_on_blocks_review_state(self):
+        r = make_routine()
+        aqt_mod.mw.state = "review"
+        with self._no_focus():
+            self.assertFalse(r.is_good_state())
+        aqt_mod.mw.state = "deckBrowser"
+
+    def test_dialogs_off_allows_open_dialog(self):
+        r = make_routine(config_extra={"avoid sync when dialogs open": False})
+        aqt_mod.dialogs._dialogs = {"Browser": (None, True)}
+        with self._no_focus():
+            self.assertTrue(r.is_good_state())
+        aqt_mod.dialogs._dialogs = {}
+
+    def test_dialog_list_blocks_matching_window(self):
+        r = make_routine()
+        aqt_mod.dialogs._dialogs = {"Browser": (None, True)}
+        with self._no_focus():
+            self.assertFalse(r.is_good_state())
+        aqt_mod.dialogs._dialogs = {}
+
+    def test_dialog_list_allows_unlisted_window(self):
+        r = make_routine(config_extra={"avoid dialogs list": ["DeckStats"]})
+        aqt_mod.dialogs._dialogs = {"Browser": (None, True)}
+        with self._no_focus():
+            self.assertTrue(r.is_good_state())
+        aqt_mod.dialogs._dialogs = {}
+
+    def test_focus_off_allows_focused(self):
+        r = make_routine(config_extra={"avoid sync when main window focused": False})
+        with mock.patch.object(SyncRoutine, "_main_window_has_focus", return_value=True):
+            self.assertTrue(r.is_good_state())
 
 
 if __name__ == "__main__":
