@@ -25,7 +25,9 @@ class UserActivityEventListener(QObject):
         self.sync_routine = sync_routine
 
     def eventFilter(self, obj: QObject, evt: QEvent):
-        if evt.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseMove, QEvent.Type.KeyPress]:
+        # Only react to actual clicks/keys — not mouse movement — to avoid
+        # resetting the sync timer (and logging) on every cursor motion.
+        if evt.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress]:
             self.sync_routine.on_user_activity()
         # if this returns true, the event won't be propagated further
         return False
@@ -56,6 +58,8 @@ class SyncRoutine:
 
         # Change detection — track collection modification timestamp
         self._last_synced_mod: int = 0
+        # Throttle repeated "can't start sync timer" log spam (e.g. during review)
+        self._last_blocked_reason: str = None
 
         # set constants (load from config)
         self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT = 0.2 * 1000 * 60  # Reinstall the event listener every 0.2 minutes. If it were running all the time, it would impact performance
@@ -148,8 +152,12 @@ class SyncRoutine:
                 reasons.append("Main Window is not on deck browser or overview screen (state: " + str(mw.state) + ")")
 
         if len(reasons) > 0:
-            self.log(f"Can't start sync timer ({', '.join(reasons)})")
+            reason = ", ".join(reasons)
+            if reason != self._last_blocked_reason:
+                self.log(f"Can't start sync timer ({reason})")
+                self._last_blocked_reason = reason
             return False
+        self._last_blocked_reason = None
         return True
 
     def start_sync_timer(self):
@@ -322,6 +330,41 @@ class SyncRoutine:
             self._preserve_window_state = False
 
         self.start_countdown_to_sync_timer()
+
+    def sync_on_close(self):
+        """Perform a final sync before Anki closes so pending changes aren't lost.
+        Runs synchronously (Anki is shutting down) and only if there is a change
+        to upload and internet connectivity is available."""
+        if self.sync_in_progress:
+            return
+        if not self.DISABLE_INTERNET_CHECK and not has_internet_connection():
+            return
+        if self.SYNC_ON_CHANGE_ONLY and not self._has_changes_since_last_sync():
+            return
+
+        auth = mw.pm.sync_auth()
+        if not auth:
+            return
+
+        self.sync_in_progress = True
+        try:
+            self.log("Syncing before Anki closes")
+            out = mw.col.sync_collection(auth, mw.pm.media_syncing_enabled())
+            if out.required == out.NO_CHANGES:
+                mw.pm.set_host_number(out.host_number)
+                if out.new_endpoint:
+                    mw.pm.set_current_sync_url(out.new_endpoint)
+                try:
+                    self._last_synced_mod = mw.col.mod
+                except Exception:
+                    pass
+                self.log("Sync on close completed")
+            else:
+                self.log("Sync on close skipped (full sync / conflict resolution needed)")
+        except Exception as e:
+            self.log(f"Sync on close error: {e}")
+        finally:
+            self.sync_in_progress = False
 
     def sync_initiated(self, *args):
         """Corner case: user initiates sync but it can't finish. Set this parameter to avoid starting another failed sync attempt on top"""

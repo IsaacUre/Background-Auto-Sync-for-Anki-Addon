@@ -59,6 +59,7 @@ def on_menu_action():
 def on_profile_will_close(*args):
     global sync_routine, config_manager, log_manager
     if sync_routine is not None:
+        sync_routine.sync_on_close()
         sync_routine.cleanup()
         _remove_sync_hooks(sync_routine)
     sync_routine = None
