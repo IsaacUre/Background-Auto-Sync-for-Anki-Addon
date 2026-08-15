@@ -21,6 +21,29 @@ from ..constants import ADDON_PACKAGE
 from ..utils import wrap_in_scroll
 
 
+def _current_version():
+    version_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "VERSION")
+    try:
+        with open(version_path, encoding="utf-8") as version_file:
+            return version_file.read().strip()
+    except OSError:
+        return ""
+
+
+def should_open_after_update():
+    """Mark the current release as shown and report whether Support should open."""
+    meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
+    version = _current_version()
+    if meta.get("supporter_opt_out", False) or not version:
+        return False
+    if meta.get("support_welcome_version") == version:
+        return False
+
+    meta["support_welcome_version"] = version
+    mw.addonManager.writeAddonMeta(ADDON_PACKAGE, meta)
+    return True
+
+
 def _load_supporter_state(dialog):
     meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
     dialog.supporter_check.blockSignals(True)

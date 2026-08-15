@@ -170,10 +170,36 @@ class SyncRoutine:
     @staticmethod
     def _open_dialog_names():
         dialogs = getattr(aqt_dialogs, "_dialogs", {})
+        open_names = []
         try:
-            return [name for name, dialog_info in dialogs.items() if dialog_info[1]]
+            for name, dialog_info in dialogs.items():
+                if not isinstance(dialog_info, (tuple, list)) or len(dialog_info) < 2:
+                    continue
+                dialog = dialog_info[1]
+                if not dialog:
+                    continue
+
+                # Anki can retain a dialog object in its registry after the
+                # window has been closed. Only treat a real visible widget as
+                # open; keep boolean entries supported for lightweight mocks
+                # and older Anki registry representations.
+                if isinstance(dialog, bool):
+                    is_visible = dialog
+                else:
+                    is_visible_method = getattr(dialog, "isVisible", None)
+                    if callable(is_visible_method):
+                        try:
+                            is_visible = bool(is_visible_method())
+                        except (RuntimeError, TypeError):
+                            is_visible = False
+                    else:
+                        is_visible = True
+
+                if is_visible:
+                    open_names.append(name)
         except Exception:
             return []
+        return open_names
 
     def is_good_state(self):
         """Check that the app isn't in any state that it shouldn't automatically sync in to avoid interrupting the user's activity"""

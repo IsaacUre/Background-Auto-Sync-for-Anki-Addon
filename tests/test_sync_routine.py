@@ -327,6 +327,24 @@ class InterruptionToggleTest(unittest.TestCase):
             self.assertTrue(r.is_good_state())
         aqt_mod.dialogs._dialogs = {}
 
+    def test_hidden_dialog_registry_entry_does_not_block(self):
+        r = make_routine()
+        hidden_dialog = mock.Mock()
+        hidden_dialog.isVisible.return_value = False
+        aqt_mod.dialogs._dialogs = {"AddCards": (None, hidden_dialog)}
+        with self._no_focus():
+            self.assertTrue(r.is_good_state())
+        aqt_mod.dialogs._dialogs = {}
+
+    def test_visible_dialog_registry_entry_blocks(self):
+        r = make_routine()
+        visible_dialog = mock.Mock()
+        visible_dialog.isVisible.return_value = True
+        aqt_mod.dialogs._dialogs = {"AddCards": (None, visible_dialog)}
+        with self._no_focus():
+            self.assertFalse(r.is_good_state())
+        aqt_mod.dialogs._dialogs = {}
+
     def test_focus_off_allows_focused(self):
         r = make_routine(config_extra={"avoid sync when main window focused": False})
         with mock.patch.object(SyncRoutine, "_main_window_has_focus", return_value=True):

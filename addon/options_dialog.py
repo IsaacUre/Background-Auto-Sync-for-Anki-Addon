@@ -168,6 +168,8 @@ class AutoSyncOptionsDialog(QDialog):
 
         # --- Support Tab ---
         tab_widget.addTab(support_tab.build(self), "Support")
+        if support_tab.should_open_after_update():
+            tab_widget.setCurrentIndex(2)
 
         # --- Bottom buttons (shared across tabs) ---
         btn_layout = QHBoxLayout()

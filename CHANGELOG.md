@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-08-15
+
+### Fixed
+- **Stale dialog detection** — Hidden or closed dialog objects retained by Anki's dialog registry no longer block background sync. Only visible dialog windows are treated as open.
+- **Dialog detection tests** added for visible and hidden registry entries.
+
 ## [5.0.0] - 2026-08-15
 
 ### Added
