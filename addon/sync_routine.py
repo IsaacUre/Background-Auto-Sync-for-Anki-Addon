@@ -71,6 +71,8 @@ class SyncRoutine:
         self._last_synced_mod: int = 0
         # Throttle repeated "can't start sync timer" log spam (e.g. during review)
         self._last_blocked_reason: str = None
+        # Throttle repeated "waiting to start sync timer" log spam (monotonic secs)
+        self._last_waiting_log_time: float = 0.0
 
         # set constants (load from config)
         self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT = 0.2 * 1000 * 60  # Reinstall the event listener every 0.2 minutes. If it were running all the time, it would impact performance
@@ -103,7 +105,12 @@ class SyncRoutine:
         """Start timer that after a few seconds starts the sync timer and installs the event listener"""
         if self.countdown_to_sync_timer is not None:
             self.countdown_to_sync_timer.stop()
-        self.log(f"Waiting {self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT / 60000} minutes to start sync timer")
+        # Throttle the "waiting" log so a long-blocked state (e.g. dialog open)
+        # doesn't spam one line every 0.2 min. Only log once per 60 seconds.
+        now = time.monotonic()
+        if now - self._last_waiting_log_time >= 60:
+            self.log(f"Waiting {self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT / 60000} minutes to start sync timer")
+            self._last_waiting_log_time = now
         self.countdown_to_sync_timer = mw.progress.timer(int(self.COUNTDOWN_TO_SYNC_TIMER_TIMEOUT), self.start_sync_timer, False)
 
     def _has_changes_since_last_sync(self) -> bool:
@@ -177,7 +184,9 @@ class SyncRoutine:
         if self.AVOID_INTERRUPTION_DIALOGS:
             blocking = [n for n in self._open_dialog_names() if n in self.AVOID_DIALOG_LIST]
             if blocking and not self._idle_grace_elapsed(self._effective_override_ms(self.AVOID_DIALOGS_TIMEOUT)):
-                reasons.append(f"Windows are open: {', '.join(sorted(blocking))}")
+                listed = ', '.join(sorted(blocking))
+                noun = "Window is open" if len(blocking) == 1 else "Windows are open"
+                reasons.append(f"{noun}: {listed}")
         # Avoid syncing while the main window has focus (unless idle past the grace period)
         if self.AVOID_INTERRUPTION_FOCUS and self._main_window_has_focus():
             if not self._idle_grace_elapsed(self._effective_override_ms(self.IDLE_SYNC_FOCUSED_TIMEOUT)):
@@ -472,6 +481,9 @@ class SyncRoutine:
                  f"focus {self.IDLE_SYNC_FOCUSED_TIMEOUT / 60000}, "
                  f"review {self.AVOID_REVIEW_TIMEOUT / 60000}, "
                  f"global {self.AVOID_OVERRIDE_TIMEOUT / 60000}. "
+                 f"Effective (min): dialogs {self._effective_override_ms(self.AVOID_DIALOGS_TIMEOUT) / 60000}, "
+                 f"focus {self._effective_override_ms(self.IDLE_SYNC_FOCUSED_TIMEOUT) / 60000}, "
+                 f"review {self._effective_override_ms(self.AVOID_REVIEW_TIMEOUT) / 60000}. "
                  f"Sync on change only: {'on' if self.SYNC_ON_CHANGE_ONLY else 'off'}. "
                  f"Idle before sync: {self.IDLE_BEFORE_SYNC / 60000} min. "
                  f"Disable internet check: {'on' if self.DISABLE_INTERNET_CHECK else 'off'}")

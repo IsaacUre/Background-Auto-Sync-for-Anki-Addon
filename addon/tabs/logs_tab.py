@@ -1,15 +1,46 @@
 """Logs tab for the Auto Sync options dialog, plus the shared LogManager."""
+import os
 from aqt.qt import QTextEdit, QVBoxLayout, QWidget
+
+# Log file written alongside the in-memory log. It is cleared on every Anki
+# restart so it always captures the current session for bug-fix review.
+LOG_FILENAME = "auto_sync.log"
+
+
+def _addon_root():
+    """Absolute path to the add-on root (contains __init__.py / main.py)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _log_path():
+    return os.path.join(_addon_root(), LOG_FILENAME)
 
 
 class LogManager:
     def __init__(self):
         self.log = ""
         self.log_dialog = None
+        # Clear the file each session so it reflects only this run of Anki.
+        self._clear_file()
+
+    def _clear_file(self):
+        try:
+            with open(_log_path(), "w", encoding="utf-8"):
+                pass
+        except OSError:
+            pass
+
+    def _append_to_file(self, line: str):
+        try:
+            with open(_log_path(), "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except OSError:
+            pass
 
     def write(self, line: str):
-        """Add a single line to the log"""
+        """Add a single line to the log (and append it to the log file)."""
         self.log += line + "\n"
+        self._append_to_file(line)
         # call the log dialog window to refresh it
         if self.log_dialog:
             try:

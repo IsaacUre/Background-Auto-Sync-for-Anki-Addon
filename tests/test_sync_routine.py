@@ -128,6 +128,32 @@ class BlockedReasonThrottleTest(unittest.TestCase):
         self.assertEqual(r.log_manager.write.call_count, count_after_first)
 
 
+class WaitingLogThrottleTest(unittest.TestCase):
+    def test_waiting_log_throttled_by_time(self):
+        r = make_routine()
+        r.countdown_to_sync_timer = None
+        r._last_waiting_log_time = 0.0
+        r.start_countdown_to_sync_timer()
+        first_count = r.log_manager.write.call_count
+        # Immediately restarting should not log again within the throttle window
+        r.start_countdown_to_sync_timer()
+        self.assertEqual(r.log_manager.write.call_count, first_count)
+
+
+class EffectiveOverrideLogTest(unittest.TestCase):
+    def test_config_log_reports_effective_overrides(self):
+        # dialogs 0 + global 10 -> effective 10; focus 0 + global 10 -> effective 10
+        r = make_routine(config_extra={
+            "avoid dialogs timeout": 0,
+            "global avoid override timeout": 10,
+            "idle sync focused timeout": 0,
+        })
+        written = [c[0][0] for c in r.log_manager.write.call_args_list]
+        config_line = next(line for line in written if "Loaded config" in line)
+        self.assertIn("Effective (min): dialogs 10.0", config_line)
+        self.assertIn("focus 10.0", config_line)
+
+
 class SyncOnCloseTest(unittest.TestCase):
     def setUp(self):
         mw.col.sync_collection = mock.Mock()

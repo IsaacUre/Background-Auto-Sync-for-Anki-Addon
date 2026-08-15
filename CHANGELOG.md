@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-08-15
+
+### Added
+- **Session log file** written to `auto_sync.log`, cleared when Anki starts for easier bug investigation.
+- **Effective override logging** showing the actual grace period after applying the global override.
+
+### Changed
+- **Settings UI reorganized** into one compact, scrollable Settings tab with grouped Sync behavior, Interruption avoidance, and Background and network sections.
+- **Interruption controls** now use consistent two-column form rows, with setting names on the left and controls on the right.
+- **Dialog interruption controls** remain grouped with their selected window types and per-condition grace period.
+- **Blocked-state logging** now throttles repeated waiting messages to reduce session-log noise.
+- **Blocked-window messages** use singular/plural wording correctly.
+- **Test coverage** expanded for waiting-log throttling and effective override reporting.
+
 ### Fixed
 - **Manual syncs no longer drop Anki behind other windows.** Window-state restore now only runs for background syncs initiated by the addon; pressing the Sync button retains focus normally.
 - **Changes made during a session are no longer lost on quit.** A final sync runs before Anki closes (only when there is a change to upload and internet is available).
