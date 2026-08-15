@@ -15,7 +15,6 @@ from aqt.qt import (
     QSpinBox,
     QTabWidget,
     QTextEdit,
-    QToolButton,
     QVBoxLayout,
     QWidget,
     Qt,
@@ -122,6 +121,11 @@ class AutoSyncOptionsDialog(QDialog):
         settings_tab = QWidget()
         tab_widget.addTab(settings_tab, "Settings")
         self._setup_settings_tab(settings_tab)
+
+        # --- Logs Tab ---
+        logs_tab = QWidget()
+        tab_widget.addTab(logs_tab, "Logs")
+        self._setup_logs_tab(logs_tab)
 
         # --- Support Tab ---
         support_tab = QWidget()
@@ -282,33 +286,20 @@ class AutoSyncOptionsDialog(QDialog):
         reset_layout.addWidget(reset_button)
         grid.addLayout(reset_layout, 8, 1)
 
-        # Inline log display (collapsed by default)
-        self.log_toggle = QToolButton()
-        self.log_toggle.setText("Sync Log")
-        self.log_toggle.setCheckable(True)
-        self.log_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.log_toggle.setArrowType(Qt.ArrowType.RightArrow)
-        self.log_toggle.setChecked(False)
+        # Wrap grid in a vbox
+        outer_layout = QVBoxLayout()
+        outer_layout.addLayout(grid)
+        parent.setLayout(outer_layout)
 
+    def _setup_logs_tab(self, parent: QWidget):
+        """Build the log viewer inside the given parent widget."""
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
         self.log_output.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        self.log_output.setVisible(False)
 
-        def toggle_log(checked):
-            self.log_output.setVisible(checked)
-            self.log_toggle.setArrowType(
-                Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow
-            )
-
-        self.log_toggle.toggled.connect(toggle_log)
-
-        # Wrap grid + log in a vbox; log fills remaining space
-        outer_layout = QVBoxLayout()
-        outer_layout.addLayout(grid)
-        outer_layout.addWidget(self.log_toggle)
-        outer_layout.addWidget(self.log_output, 1)  # stretch factor 1 to fill space
-        parent.setLayout(outer_layout)
+        layout = QVBoxLayout()
+        layout.addWidget(self.log_output, 1)  # stretch factor 1 to fill space
+        parent.setLayout(layout)
 
         # Register for live log updates and show existing log
         self.log_manager.register(self)
