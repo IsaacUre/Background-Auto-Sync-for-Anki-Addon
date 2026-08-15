@@ -78,27 +78,8 @@ GPL-3.0 — see [LICENSE.txt](LICENSE.txt).
 
 ## Changelog
 
-### 2026-08-15
-- **Feature:** Added a "On sync conflict" option to force a one-way sync direction (AnkiWeb → local or local → AnkiWeb) instead of prompting, keeping the automated pipeline running when conflicts occur. Off by default.
+See [CHANGELOG.md](CHANGELOG.md) for the full history of changes and releases.
 
-### 2026-04-28
-- **Bug Fix:** Fixed an issue where the background sync could crash the main Anki thread (`PoisonError`) if it encountered a network or server error during the sync process.
-
-### 2026-04-20
-- **Feature:** Added an option to completely disable the pre-sync internet connectivity check.
-- **Improved:** Switched the default internet connectivity ping to use HTTPS Port 443 instead of TCP Port 53, eliminating false-negative "offline" errors on strict corporate and university networks.
-
-### 2026-04-14
-- **Documentation:** Improved rendering compatibility for AnkiWeb by using standard bulleted lists.
-
-### 2026-03-27
-- **Documentation:** Added strict limitations to README regarding the Undo queue and multi-device sync conflicts.
-- **Support:** Added Ko-fi donation support links.
-
-### 2026-03-26
-- **Bug Fix:** Completely resolved the "focus stealing" issue where background syncs would interrupt your workflow by un-minimizing Anki or bringing it to the foreground.
-- **UI:** Added a "Reset to Defaults" button in the configuration menu.
-- **UI:** The settings menu now dynamically grays out and disables unused sync timers when "Change Only" mode is toggled.
 - **Bug Fix:** Fixed a startup `NameError` crash due to missing configuration variables.
 - **Documentation:** Major README refresh with explicit AnkiWeb installation instructions and UI behavior notes.
 
