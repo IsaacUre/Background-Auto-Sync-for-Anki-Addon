@@ -21,6 +21,7 @@ This addon is a fork of [Auto-Sync-Anki-Addon by Robin-Haupt-1](https://github.c
 - **Undo Queue:** Syncing terminates Anki's "undo" queue. Periodic sync may mean that if you take a break and return, you won't be able to undo actions performed just before the break.
 - **Sync Conflicts:** Auto-syncing on one device while actively using, editing, or studying on another device can lead to sync conflicts. 
 - **Idle Periodic Sync:** Using "Idle periodic sync" while leaving Anki open may cause issues, especially if other add-ons with background activity are installed.
+- **Strictly avoid interruptions:** With this enabled, auto-sync only runs while Anki is in the background (unfocused, no dialogs open, not reviewing). Changes made during a session are still uploaded when you close Anki, but background syncs are otherwise deferred until Anki loses focus.
 
 ## Installation
 

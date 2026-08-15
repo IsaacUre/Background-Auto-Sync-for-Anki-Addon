@@ -12,6 +12,7 @@ from aqt.qt import (
     QPixmap,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QTabWidget,
     QTextEdit,
@@ -185,7 +186,9 @@ class AutoSyncOptionsDialog(QDialog):
         )
         strictly_avoid_note.setWordWrap(True)
         strictly_avoid_note.setTextFormat(Qt.TextFormat.RichText)
-        strictly_avoid_note.setMaximumWidth(380)
+        strictly_avoid_note.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
 
         # "Only sync when changes detected" checkbox
         sync_on_change_only_label = QLabel("Only sync when changes are detected")

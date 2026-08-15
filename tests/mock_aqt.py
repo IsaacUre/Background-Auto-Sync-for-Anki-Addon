@@ -75,6 +75,7 @@ def install():
         "QPixmap",
         "QPushButton",
         "QScrollArea",
+        "QSizePolicy",
         "QSpinBox",
         "QTabWidget",
         "QTextEdit",
