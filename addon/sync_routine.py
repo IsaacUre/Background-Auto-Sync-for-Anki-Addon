@@ -209,7 +209,7 @@ class SyncRoutine:
         # Avoid syncing while dialogs (browser, add-note, etc.) are open
         if self.AVOID_INTERRUPTION_DIALOGS:
             blocking = [n for n in self._open_dialog_names() if n in self.AVOID_DIALOG_LIST]
-            if blocking and not self._idle_grace_elapsed(self._effective_override_ms(self.AVOID_DIALOGS_TIMEOUT)):
+            if blocking:
                 listed = ', '.join(sorted(blocking))
                 noun = "Window is open" if len(blocking) == 1 else "Windows are open"
                 reasons.append(f"{noun}: {listed}")
