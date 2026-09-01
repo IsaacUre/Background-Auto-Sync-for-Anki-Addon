@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [5.2.0] - 2026-09-01
+
+### Changed
+- **Reachability check now probes the sync server** — the pre-sync check opened
+  a TCP connection to `8.8.8.8` (Google Public DNS) and only fell back to
+  `ankiweb.net`. That answered the wrong question: whether a public resolver is
+  up says nothing about whether this collection can sync, and on an offline
+  machine the probe ran every sync cycle. `sync_server_reachable()` now probes
+  the server the collection actually syncs with, read from
+  `mw.pm.sync_endpoint()`, so **self-hosted sync servers are checked correctly**
+  instead of being reported reachable because Google answered. Falls back to
+  `ankiweb.net:443` when no endpoint is configured. Nothing is transmitted; the
+  socket is opened and closed.
+- **Setting relabelled** to "Disable pre-sync reachability check", since it no
+  longer describes an internet check. The config key is unchanged, so existing
+  configurations are unaffected.
+
+### Added
+- **Regression tests** (`tests/test_removals.py`) locking in three properties
+  that are easy to lose when merging from upstream: the add-on registers only
+  `init` on `profile_did_open` and so opens no window by itself; it embeds no
+  remote web content; and its sources reference no external URL at all.
+  Each guard was mutation-tested by reintroducing the removed code and
+  confirming the corresponding test fails.
+- **Unit tests** for `sync_target()` / `sync_server_reachable()`
+  (`tests/test_utils.py`), covering custom endpoints, ports, schemes, malformed
+  input, and a guard that no third-party host is ever contacted.
+
+
 ## [5.1.0] - 2026-09-01
 
 ### Removed
