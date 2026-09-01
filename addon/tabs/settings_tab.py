@@ -220,8 +220,10 @@ def _build_background_section(dialog):
     form.addRow(idle_label, dialog.idle_sync_timeout_spinbox)
 
     dialog.disable_internet_check_checkbox.setText("")
-    internet_label = QLabel("Disable pre-sync internet check")
-    internet_label.setToolTip("Skip the connectivity check and immediately attempt to sync.")
+    internet_label = QLabel("Disable pre-sync reachability check")
+    internet_label.setToolTip(
+        "Skip the check that the sync server is reachable and attempt to sync immediately."
+    )
     dialog.disable_internet_check_checkbox.setToolTip(internet_label.toolTip())
     dialog.disable_internet_check_checkbox.setChecked(dialog.config.get(CONFIG_DISABLE_INTERNET_CHECK))
     dialog.disable_internet_check_checkbox.toggled.connect(dialog.change_disable_internet_check)

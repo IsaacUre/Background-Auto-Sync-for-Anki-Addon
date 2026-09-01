@@ -20,7 +20,7 @@ from .constants import (
     CONFIG_DISABLE_INTERNET_CHECK,
     CONFIG_CONFLICT_RESOLUTION,
 )
-from .utils import has_internet_connection
+from .utils import sync_server_reachable
 from .tabs.logs_tab import LogManager
 
 log_to_stdout = False
@@ -317,7 +317,7 @@ class SyncRoutine:
     def do_sync(self):
         """Force the app to sync the collection if there's an internet connection.
         Preserves window state so Anki never steals focus."""
-        if not self.DISABLE_INTERNET_CHECK and not has_internet_connection():
+        if not self.DISABLE_INTERNET_CHECK and not sync_server_reachable():
             self.log(f"No internet connection, delaying sync for {self.SYNC_TIMEOUT / 60000} minutes")
             self.activity_since_sync = True  # shorten duration to next sync
             self.start_sync_timer()
@@ -441,7 +441,7 @@ class SyncRoutine:
         to upload and internet connectivity is available."""
         if self.sync_in_progress:
             return
-        if not self.DISABLE_INTERNET_CHECK and not has_internet_connection():
+        if not self.DISABLE_INTERNET_CHECK and not sync_server_reachable():
             return
         if self.SYNC_ON_CHANGE_ONLY and not self._has_changes_since_last_sync():
             return
