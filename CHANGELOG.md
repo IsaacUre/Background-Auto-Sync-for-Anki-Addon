@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [Unreleased]
+
+### Removed
+- **Embedded Ko-fi widget** — the Support tab no longer creates an `AnkiWebView`
+  that loads `storage.ko-fi.com/cdn/widget/Widget_2.js`. The add-on made an
+  outbound request to a third-party CDN whenever the options dialog was built,
+  and executed remote JavaScript it does not control inside Anki's webview.
+  Neither happens any more. The local UPI/BTC/ETH QR codes are unchanged — they
+  are static images and make no network requests.
+- **Automatic Support tab after updates** — the add-on no longer schedules a
+  timer on profile open to force the options dialog onto the Support tab when
+  the version has changed. It now opens no windows on its own.
+- **Supporter opt-out checkbox** — removed along with its `supporter_opt_out`
+  and `last_seen_version` add-on meta keys, since it existed only to suppress
+  the behaviour above.
+- **Dead code** — `ADDON_PACKAGE` and the `initial_tab` parameter on
+  `AutoSyncOptionsDialog` / `on_options_call`, both of which lost their only
+  callers with the above.
+
+### Notes
+- Sync behaviour is untouched. No change to `sync_routine.py`, `config.py`, or
+  any sync, conflict-resolution, or interruption-avoidance logic.
+- The only remaining outbound connection is the connectivity probe in
+  `utils.py`, which opens and immediately closes a TCP socket to `8.8.8.8:443`
+  (falling back to `ankiweb.net:443`) and transmits no data. It can be turned
+  off with the "disable internet check" setting.
+
+
 ## [5.0.1] - 2026-08-15
 
 ### Fixed
