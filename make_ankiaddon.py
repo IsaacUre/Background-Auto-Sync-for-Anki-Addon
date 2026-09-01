@@ -10,6 +10,7 @@ from bump import (
     bump_version as bump_patch_version,
     read_current_version,
     sync_version,
+    use_utf8_stdout,
     validate_version,
 )
 
@@ -172,6 +173,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv[1:])
 
 def main(argv: list[str]) -> int:
+    use_utf8_stdout()
     args = parse_args(argv)
     return create_ankiaddon(args.version, clean=args.clean)
 

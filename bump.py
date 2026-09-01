@@ -6,6 +6,22 @@ from pathlib import Path
 
 VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
 SHORT_VERSION_RE = re.compile(r"^\d+\.\d+$")
+
+
+def use_utf8_stdout() -> None:
+    """Best-effort: allow non-ASCII on stdout/stderr.
+
+    Windows consoles default to a legacy code page (cp1252), where printing a
+    non-ASCII character raises UnicodeEncodeError. In this project that killed
+    the whole build, because the failure happened inside the version bump that
+    create_ankiaddon() runs first. Output here is deliberately ASCII, but this
+    keeps a stray character from breaking the build again.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            pass
 BUMP_PART_ALIASES = {
     "major": "major",
     "minor": "minor",
@@ -107,7 +123,8 @@ def bump_version(addon_dir: Path = Path("addon"), bump_part: str = "patch") -> i
         part = normalize_bump_part(bump_part)
         current_version = read_current_version(addon_dir)
         new_version = increment_version(current_version, part)
-        print(f"Bumping {part} version: {current_version} → {new_version}")
+        # ASCII arrow on purpose - see use_utf8_stdout() above.
+        print(f"Bumping {part} version: {current_version} -> {new_version}")
         sync_version(new_version, addon_dir)
         print(f"Successfully updated manifest.json and VERSION to {new_version}")
         return 0
@@ -133,6 +150,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv[1:])
 
 def main(argv: list[str]) -> int:
+    use_utf8_stdout()
     args = parse_args(argv)
     return bump_version(Path(args.addon_dir), args.part)
 

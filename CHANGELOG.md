@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `AutoSyncOptionsDialog` / `on_options_call`, both of which lost their only
   callers with the above.
 
+### Fixed
+- **Build failed on Windows** — `bump.py` printed a U+2192 arrow, which a
+  console using the legacy cp1252 code page cannot encode. The resulting
+  `UnicodeEncodeError` happened inside the version bump that
+  `create_ankiaddon()` runs first, so `python make_ankiaddon.py` aborted before
+  packaging anything. The message now uses an ASCII arrow, and both build
+  entry points call `use_utf8_stdout()` so a future stray character cannot
+  break the build the same way.
+
 ### Notes
 - Sync behaviour is untouched. No change to `sync_routine.py`, `config.py`, or
   any sync, conflict-resolution, or interruption-avoidance logic.
