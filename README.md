@@ -17,7 +17,7 @@ This addon is a fork of [Auto-Sync-Anki-Addon by Robin-Haupt-1](https://github.c
 - **Idle-before-sync delay** — When a change is detected, waits for a configurable idle period before syncing, so it doesn't interrupt an active editing session (default: 2 minutes).
 - **Interruption avoidance** — Three independently toggleable conditions (dialogs open / main window focused / reviewing) that defer sync, each with its own "allow sync anyway after" grace period, plus a global override timeout.
 - **Session log file** — View a timestamped log in the Logs tab or inspect `auto_sync.log` in the add-on folder. The file is cleared when Anki starts so it contains the current session's activity.
-- **Support tab** — The Support tab opens automatically once after each new release. Enable the supporter checkbox to prevent it from opening automatically in future releases.
+- **No nagging** — The add-on never opens a window on its own. The Support tab is only shown if you open the options dialog and select it.
 
 ## Important Considerations
 

@@ -1,10 +1,8 @@
 """Support tab for the Auto Sync options dialog."""
 import os
 
-from aqt import mw
 from aqt.qt import (
     QApplication,
-    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -16,44 +14,7 @@ from aqt.qt import (
     Qt,
 )
 
-from ..constants import ADDON_PACKAGE
 from ..utils import wrap_in_scroll
-
-
-def _current_version():
-    version_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "VERSION")
-    try:
-        with open(version_path, encoding="utf-8") as version_file:
-            return version_file.read().strip()
-    except OSError:
-        return ""
-
-
-def should_open_after_update():
-    """Mark the current release as shown and report whether Support should open."""
-    meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
-    version = _current_version()
-    if meta.get("supporter_opt_out", False) or not version:
-        return False
-    if meta.get("last_seen_version") == version:
-        return False
-
-    meta["last_seen_version"] = version
-    mw.addonManager.writeAddonMeta(ADDON_PACKAGE, meta)
-    return True
-
-
-def _load_supporter_state(dialog):
-    meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
-    dialog.supporter_check.blockSignals(True)
-    dialog.supporter_check.setChecked(meta.get("supporter_opt_out", False))
-    dialog.supporter_check.blockSignals(False)
-
-
-def _on_supporter_check_toggled(dialog, checked):
-    meta = mw.addonManager.addonMeta(ADDON_PACKAGE)
-    meta["supporter_opt_out"] = checked
-    mw.addonManager.writeAddonMeta(ADDON_PACKAGE, meta)
 
 
 def _add_qr(qr_list, name, address, filename, base_path):
@@ -121,12 +82,6 @@ def build(dialog) -> QWidget:
     instr.setTextFormat(Qt.TextFormat.RichText)
     instr.setAlignment(Qt.AlignmentFlag.AlignCenter)
     layout.addWidget(instr)
-
-    # Supporter opt-out (hides the automatic update welcome)
-    dialog.supporter_check = QCheckBox("I have supported this addon (Hide automatic update welcome)")
-    dialog.supporter_check.setToolTip("Checking this will prevent the Support tab from opening automatically after future updates.")
-    dialog.supporter_check.toggled.connect(lambda checked: _on_supporter_check_toggled(dialog, checked))
-    layout.addWidget(dialog.supporter_check, 0, Qt.AlignmentFlag.AlignCenter)
     layout.addSpacing(10)
 
     base_path = os.path.dirname(os.path.dirname(__file__))
@@ -140,5 +95,4 @@ def build(dialog) -> QWidget:
     _add_qr(qr_list, "ETH", "0xce6899e4903EcB08bE5Be65E44549fadC3F45D27", "ETH.jpg", base_path)
     layout.addLayout(qr_list)
 
-    _load_supporter_state(dialog)
     return wrap_in_scroll(content)

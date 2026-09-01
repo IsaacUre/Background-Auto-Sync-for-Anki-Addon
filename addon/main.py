@@ -1,5 +1,5 @@
 from aqt import gui_hooks, mw
-from aqt.qt import QAction, QTimer
+from aqt.qt import QAction
 from .config import AutoSyncConfigManager
 from .tabs.logs_tab import LogManager
 from .options_dialog import on_options_call
@@ -56,20 +56,6 @@ def on_menu_action():
         on_options_call(config_manager, sync_routine, log_manager)
 
 
-def _open_support_after_update():
-    if not (config_manager and sync_routine and log_manager):
-        return
-    from .tabs.support_tab import should_open_after_update
-
-    if should_open_after_update():
-        on_options_call(config_manager, sync_routine, log_manager, initial_tab=2)
-
-
-def on_profile_did_open():
-    # Let Anki finish restoring the profile before opening a non-modal dialog.
-    QTimer.singleShot(5000, _open_support_after_update)
-
-
 def on_profile_will_close(*args):
     global sync_routine, config_manager, log_manager
     if sync_routine is not None:
@@ -82,7 +68,6 @@ def on_profile_will_close(*args):
 
 
 gui_hooks.profile_did_open.append(init)
-gui_hooks.profile_did_open.append(on_profile_did_open)
 gui_hooks.profile_will_close.append(on_profile_will_close)
 
 # Wire up the Anki Add-on Manager's "Config" button
