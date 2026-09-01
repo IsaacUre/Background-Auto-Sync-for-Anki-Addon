@@ -15,7 +15,6 @@ from aqt.qt import (
     QPixmap,
     Qt,
 )
-from aqt.webview import AnkiWebView
 
 from ..constants import ADDON_PACKAGE
 from ..utils import wrap_in_scroll
@@ -129,29 +128,6 @@ def build(dialog) -> QWidget:
     dialog.supporter_check.toggled.connect(lambda checked: _on_supporter_check_toggled(dialog, checked))
     layout.addWidget(dialog.supporter_check, 0, Qt.AlignmentFlag.AlignCenter)
     layout.addSpacing(10)
-
-    # Ko-fi widget (embedded via AnkiWebView)
-    dialog.kofi_widget = AnkiWebView(content)
-    dialog.kofi_widget.setFixedHeight(42)
-    kofi_html = """
-    <html>
-    <head>
-    <style>
-      body { background-color: transparent; margin: 0; padding: 0; overflow: hidden; text-align: center; line-height: 42px; }
-      .kofi-button-col { display: inline-block; vertical-align: middle; }
-    </style>
-    </head>
-    <body>
-    <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
-    <script type='text/javascript'>
-      kofiwidget2.init('Support me on Ko-fi', '#72a4f2', 'D1D01W6NQT');
-      kofiwidget2.draw();
-    </script>
-    </body>
-    </html>
-    """
-    dialog.kofi_widget.setHtml(kofi_html)
-    layout.addWidget(dialog.kofi_widget)
 
     base_path = os.path.dirname(os.path.dirname(__file__))
 

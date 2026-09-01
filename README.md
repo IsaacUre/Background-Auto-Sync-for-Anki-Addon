@@ -96,9 +96,8 @@ The addon ensures syncs **never interrupt your work**:
 
 ## Support
 
-If you find this add-on useful, please consider supporting its development:
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/D1D01W6NQT)
+If you find this add-on useful, the Support tab in the options dialog lists the
+original author's donation addresses (UPI, Bitcoin, Ethereum).
 
 ## License
 

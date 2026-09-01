@@ -48,7 +48,6 @@ class AutoSyncOptionsDialog(QDialog):
         self.log_manager = log_manager
         self.initial_tab = initial_tab
 
-        self.kofi_widget = None
         self.log_output = None
 
         # set up UI elements
@@ -290,9 +289,6 @@ class AutoSyncOptionsDialog(QDialog):
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         self.log_manager.unregister(self)
-        if self.kofi_widget:
-            self.kofi_widget.cleanup()
-            self.kofi_widget = None
         super().closeEvent(a0)
 
 
