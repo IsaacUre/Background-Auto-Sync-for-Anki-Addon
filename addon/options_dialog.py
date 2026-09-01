@@ -40,13 +40,11 @@ class AutoSyncOptionsDialog(QDialog):
         config: AutoSyncConfigManager,
         sync_routine: SyncRoutine,
         log_manager: LogManager,
-        initial_tab: int | None = None,
     ):
         super(AutoSyncOptionsDialog, self).__init__()
         self.config = config
         self.sync_routine: SyncRoutine = sync_routine
         self.log_manager = log_manager
-        self.initial_tab = initial_tab
 
         self.log_output = None
 
@@ -174,8 +172,6 @@ class AutoSyncOptionsDialog(QDialog):
 
         # --- Support Tab ---
         tab_widget.addTab(support_tab.build(self), "Support")
-        if self.initial_tab is not None:
-            tab_widget.setCurrentIndex(self.initial_tab)
 
         # --- Bottom buttons (shared across tabs) ---
         btn_layout = QHBoxLayout()
@@ -292,7 +288,7 @@ class AutoSyncOptionsDialog(QDialog):
         super().closeEvent(a0)
 
 
-def on_options_call(conf, sync_routine, log_manager, initial_tab=None):
+def on_options_call(conf, sync_routine, log_manager):
     """Open settings dialog"""
-    dialog = AutoSyncOptionsDialog(conf, sync_routine, log_manager, initial_tab)
+    dialog = AutoSyncOptionsDialog(conf, sync_routine, log_manager)
     dialog.exec()
